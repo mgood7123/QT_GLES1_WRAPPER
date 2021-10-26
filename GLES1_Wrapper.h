@@ -8,6 +8,8 @@
 #include <QMatrix4x4>
 #include <QStack>
 
+#include "GLUTesselator/src/tess.h"
+
 class GLES1_Wrapper
 {
     static const char * vertex_shader;
@@ -24,10 +26,12 @@ class GLES1_Wrapper
 
     int projectionUniform;
     int modelViewUniform;
+    int normalUniform;
 
     GLenum matrixMode;
 
     QMatrix4x4 & getCurrentMatrix();
+    QVector3D currentNormal;
 
     QList<float> vertexData;
     GLsizei vertexCount;
@@ -43,9 +47,10 @@ class GLES1_Wrapper
     GLint vertex_z_int;
     GLint vertex_w_int;
 
-    GLfloat color_red = 1;
-    GLfloat color_green = 1;
-    GLfloat color_blue = 1;
+    // the default color is white
+    GLfloat color_red = 0;
+    GLfloat color_green = 0;
+    GLfloat color_blue = 0;
     GLfloat color_alpha = 1;
 
 
@@ -56,6 +61,9 @@ class GLES1_Wrapper
     QMatrix4x4 toMatrix(const GLdouble * m);
 
 public:
+
+    void glBegin(GLenum mode);
+    void glEnd();
 
     GLES1_Wrapper(QOpenGLContext * context);
 
@@ -113,8 +121,25 @@ public:
     void glRotated(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
     void glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
 
-    void glBegin(GLenum mode);
-    void glEnd();
+    void glNormal3b(	GLbyte nx,
+        GLbyte ny,
+        GLbyte nz);
+
+    void glNormal3d(	GLdouble nx,
+        GLdouble ny,
+        GLdouble nz);
+
+    void glNormal3f(	GLfloat nx,
+        GLfloat ny,
+        GLfloat nz);
+
+    void glNormal3i(	GLint nx,
+        GLint ny,
+        GLint nz);
+
+    void glNormal3s(	GLshort nx,
+        GLshort ny,
+        GLshort nz);
 
     void glVertex2s(	GLshort x,
         GLshort y);

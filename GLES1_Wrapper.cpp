@@ -7,6 +7,7 @@ layout (location = 0) in vec4 vertex_position;
 layout (location = 1) in vec4 vertex_color;
 uniform mat4 projection;
 uniform mat4 modelView;
+uniform vec3 normal;
 
 out vec4 fragment_in_color;
 
@@ -50,6 +51,7 @@ void GLES1_Wrapper::glEnd()
     gles2->glGenBuffers(1, &VBO);
     gles3->glBindVertexArray(VAO);
     gles2->glBindBuffer(GL_ARRAY_BUFFER, VBO);
+//    qDebug() << "set vertex buffer data to" << vertexData;
     gles2->glBufferData(GL_ARRAY_BUFFER, vertexData.length() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
 
     int position_components = 4;
@@ -70,8 +72,42 @@ void GLES1_Wrapper::glEnd()
 
     shader.setUniformValue(projectionUniform, stack_GL_PROJECTION_MATRIX.last());
     shader.setUniformValue(modelViewUniform, stack_GL_MODELVIEW_MATRIX.last());
+    shader.setUniformValue(normalUniform, currentNormal);
 
-    gles2->glDrawArrays(primitiveMode, 0, vertexCount);
+    if (primitiveMode == GL_QUADS) {
+        // calculate quad elements index array
+        QList<int> elements;
+        auto c = vertexData.length();
+        qsizetype i = 0;
+        int p = 0;
+        auto increment = stride * 4;
+        while(i < c) {
+            int i0 = p++;
+            int i1 = p++;
+            int i2 = p++;
+            int i3 = p++;
+            elements.append({
+                i0, i1, i2,
+                i0, i2, i3
+            });
+            i += increment;
+        }
+
+        unsigned int EBO;
+        gles2->glGenBuffers(1, &EBO);
+
+        gles2->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+//        qDebug() << "set element buffer data to" << elements;
+        gles2->glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements.data(), GL_STATIC_DRAW);
+
+        gles2->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        auto elementCount = elements.length();
+        qDebug() << "drawing" << elementCount << "elements";
+        gles2->glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_INT, 0);
+    } else {
+        qDebug() << "drawing" << vertexCount << "vertices";
+        gles2->glDrawArrays(primitiveMode, 0, vertexCount);
+    }
 
     gles3->glDeleteVertexArrays(1, &VAO);
     gles2->glDeleteBuffers(1, &VBO);
@@ -126,6 +162,7 @@ GLES1_Wrapper::GLES1_Wrapper(QOpenGLContext * context) : context(context) {
     stack_GL_MODELVIEW_MATRIX.push(QMatrix4x4());
     stack_GL_TEXTURE_MATRIX.push(QMatrix4x4());
     stack_GL_COLOR_MATRIX.push(QMatrix4x4());
+    currentNormal = {0, 0, 1};
 
     if (!shader.isLinked()) {
         QByteArray v = vertex_shader;
@@ -170,6 +207,7 @@ GLES1_Wrapper::GLES1_Wrapper(QOpenGLContext * context) : context(context) {
     shader.bind();
     projectionUniform = shader.uniformLocation("projection");
     modelViewUniform = shader.uniformLocation("modelView");
+    normalUniform = shader.uniformLocation("normal");
 }
 
 void GLES1_Wrapper::glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble nearVal, GLdouble farVal)
@@ -314,6 +352,31 @@ void GLES1_Wrapper::glRotated(GLdouble angle, GLdouble x, GLdouble y, GLdouble z
 void GLES1_Wrapper::glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
 {
     getCurrentMatrix().rotate(angle, x, y, z);
+}
+
+void GLES1_Wrapper::glNormal3b(GLbyte nx, GLbyte ny, GLbyte nz)
+{
+    currentNormal = {static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)};
+}
+
+void GLES1_Wrapper::glNormal3d(GLdouble nx, GLdouble ny, GLdouble nz)
+{
+    currentNormal = {static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)};
+}
+
+void GLES1_Wrapper::glNormal3f(GLfloat nx, GLfloat ny, GLfloat nz)
+{
+    currentNormal = {static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)};
+}
+
+void GLES1_Wrapper::glNormal3i(GLint nx, GLint ny, GLint nz)
+{
+    currentNormal = {static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)};
+}
+
+void GLES1_Wrapper::glNormal3s(GLshort nx, GLshort ny, GLshort nz)
+{
+    currentNormal = {static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)};
 }
 
 void GLES1_Wrapper::glVertex2s(GLshort x, GLshort y)
